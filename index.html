@@ -214,6 +214,75 @@
         .debuff-title { color: #ff003c; font-weight: bold; font-size: 15px; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; }
         .buff-icon-canvas { display: block; flex-shrink: 0; }
         .buff-desc { color: #aaa; font-size: 12px; line-height: 1.4; }
+        /* 容器與分頁按鈕 */
+        .tab-bar {
+          display: flex;
+          gap: 8px;
+          border-bottom: 2px solid #ddd;
+          margin-bottom: 15px;
+        }
+        
+        .tab-btn {
+          padding: 10px 20px;
+          border: none;
+          background-color: #e0e0e0;
+          cursor: pointer;
+          border-radius: 8px 8px 0 0;
+          font-weight: bold;
+          transition: background 0.2s;
+        }
+        
+        .tab-btn.active {
+          background-color: #007bff;
+          color: white;
+        }
+        
+        /* 分頁顯示控制 */
+        .tab-content {
+          display: none;
+          padding: 15px;
+          border: 1px solid #ddd;
+          border-top: none;
+          border-radius: 0 0 8px 8px;
+        }
+        
+        .tab-content.active {
+          display: block;
+        }
+        
+        /* 無人機卡片樣式 */
+        .drone-stats {
+          background: #f8f9fa;
+          padding: 10px 15px;
+          border-radius: 6px;
+          margin-bottom: 15px;
+        }
+        
+        .item-card {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 16px;
+          margin-bottom: 10px;
+          background: #ffffff;
+          border: 1px solid #eee;
+          border-radius: 8px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .item-card button {
+          padding: 8px 16px;
+          background-color: #28a745;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+        }
+        
+        .item-card button:disabled {
+          background-color: #cccccc;
+          cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -408,6 +477,60 @@
                 <div class="modal-confirm-btn" id="modal-confirm-action" onclick="closeModal()">Confirm</div>
             </div>
         </div>
+    </div>
+    <div class="game-container">
+      <!-- 資源展示 -->
+      <div class="resource-display">
+        🪨 礦石總量：<span id="ore-count">0</span>
+      </div>
+    
+      <!-- 分頁按鈕區域 -->
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('upgrade-tab')">升級系統</button>
+        <button class="tab-btn" onclick="switchTab('drone-tab')">無人機採礦</button>
+      </div>
+    
+      <!-- 分頁 1：原有升級系統 -->
+      <div id="upgrade-tab" class="tab-content active">
+        <h3>玩家升級</h3>
+        <p>（原本的點擊升級或基礎強化放在這裡）</p>
+      </div>
+    
+      <!-- 分頁 2：新新增的無人機採礦系統 -->
+      <div id="drone-tab" class="tab-content">
+        <h3>🤖 無人機採礦控制中心</h3>
+        
+        <div class="drone-stats">
+          <p>目前無人機數量：<span id="drone-count">0</span> 架</p>
+          <p>當前總開採速度：<span id="drone-cps">0</span> 礦石 / 秒</p>
+        </div>
+    
+        <div class="drone-shop">
+          <!-- 購買無人機 -->
+          <div class="item-card">
+            <div>
+              <h4>採礦無人機 (MK-1)</h4>
+              <p>自動幫你採集礦石。</p>
+            </div>
+            <button id="buy-drone-btn" onclick="buyDrone()">
+              購買 (+1) <br>
+              <small>費用: <span id="drone-cost">10</span> 礦石</small>
+            </button>
+          </div>
+    
+          <!-- 升級無人機 -->
+          <div class="item-card">
+            <div>
+              <h4>晶片升級：高效旋翼</h4>
+              <p>提升所有無人機 50% 採礦效率。</p>
+            </div>
+            <button id="upgrade-drone-btn" onclick="upgradeDrone()">
+              升級 (Lv. <span id="drone-level">1</span>) <br>
+              <small>費用: <span id="drone-upgrade-cost">50</span> 礦石</small>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 </div>
 
@@ -1521,6 +1644,85 @@
         document.getElementById('mission-final-score').innerText = missionScore;
         document.getElementById('mission-game-over').style.display = 'flex';
     }
+    // 遊戲核心數據狀態
+    const state = {
+      ore: 0,
+      drones: 0,
+      droneBaseCost: 10,
+      dronePower: 1,           // 每架無人機基本每秒產量
+      droneUpgradeLevel: 1,
+      droneUpgradeCost: 50
+    };
+    
+    // 1. 分頁切換邏輯
+    function switchTab(tabId) {
+      // 隱藏所有分頁內容
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      // 取消所有按鈕的高亮狀態
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+    
+      // 顯示選中的分頁，並將點擊的按鈕設為高亮
+      document.getElementById(tabId).classList.add('active');
+      event.currentTarget.classList.add('active');
+    }
+    
+    // 2. 購買無人機
+    function buyDrone() {
+      const currentCost = getDroneCost();
+      if (state.ore >= currentCost) {
+        state.ore -= currentCost;
+        state.drones += 1;
+        updateUI();
+      }
+    }
+    
+    // 計算無人機遞增價格
+    function getDroneCost() {
+      return Math.floor(state.droneBaseCost * Math.pow(1.15, state.drones));
+    }
+    
+    // 3. 升級無人機採礦效率
+    function upgradeDrone() {
+      if (state.ore >= state.droneUpgradeCost) {
+        state.ore -= state.droneUpgradeCost;
+        state.droneUpgradeLevel += 1;
+        state.dronePower *= 1.5; // 每級提升 50% 產量
+        state.droneUpgradeCost = Math.floor(state.droneUpgradeCost * 2.2); // 升級費用遞增
+        updateUI();
+      }
+    }
+    
+    // 4. 自動採礦計時器 (每秒執行一次)
+    setInterval(() => {
+      const passiveIncome = state.drones * state.dronePower;
+      state.ore += passiveIncome;
+      updateUI();
+    }, 1000);
+    
+    // 5. 更新畫面 UI 與按鈕狀態
+    function updateUI() {
+      // 數據顯示
+      document.getElementById('ore-count').innerText = Math.floor(state.ore);
+      document.getElementById('drone-count').innerText = state.drones;
+      document.getElementById('drone-cps').innerText = (state.drones * state.dronePower).toFixed(1);
+      
+      // 費用顯示
+      const droneCost = getDroneCost();
+      document.getElementById('drone-cost').innerText = droneCost;
+      document.getElementById('drone-level').innerText = state.droneUpgradeLevel;
+      document.getElementById('drone-upgrade-cost').innerText = state.droneUpgradeCost;
+    
+      // 動態啟用/停用按鈕 (資源不夠時變灰色)
+      document.getElementById('buy-drone-btn').disabled = state.ore < droneCost;
+      document.getElementById('upgrade-drone-btn').disabled = state.ore < state.droneUpgradeCost;
+    }
+    
+    // 初始化 UI
+    updateUI();
 </script>
 </body>
 </html>
