@@ -269,7 +269,8 @@
                 <div style="color: #ff00cc; font-weight: bold; margin-bottom: 5px; text-align: center;">【Battlefield Support Supplies】</div>
                 🟨 <span style="color:#ffd700; font-weight:bold;">Yellow Cube</span>: Fire Rate Overload (Rapid Fire)<br>
                 🟩 <span style="color:#00ff66; font-weight:bold;">Green Cube</span>: Spread Shot Upgrade (3-Way Fire)<br>
-                ⬜ <span style="color:#ffffff; font-weight:bold;">White Cube</span>: Invincible Shield (Can ram enemies)
+                ⬜ <span style="color:#ffffff; font-weight:bold;">White Cube</span>: Invincible Shield (Can ram enemies)<br>
+                💎 <span style="color:#ff00cc; font-weight:bold;">Tech Gem</span>: Direct Bonus Tech Points
             </div>
 
             <button class="start-btn" style="border-color:#ff00cc; color:#ff00cc; box-shadow: 0 0 15px rgba(255, 0, 204, 0.4);" onclick="enterMission()">Enter Sector</button>
@@ -282,7 +283,7 @@
             <div class="tech-points">Tech points: <span id="tech-points-display">0</span></div>
         </div>
         <div class="upgrade-list" id="upgrades-list">
-            </div>
+        </div>
     </div>
 
     <div id="mining-screen" class="screen">
@@ -1258,17 +1259,19 @@
     window.addEventListener('mousemove', handleMove); window.addEventListener('mouseup', handleUp); window.addEventListener('touchmove', handleMove, {passive: false}); window.addEventListener('touchend', handleUp);
 
     // =========================================
-    // 星際突圍任務邏輯 (完全補全並支援手機觸控)
+    // 星際突圍 / 隕石突圍任務邏輯 (全新升級版)
     // =========================================
     const mCanvas = document.getElementById('missionCanvas');
     const mCtx = mCanvas.getContext('2d');
     
-    let mPlayer, mEnemies, mBullets, mEnemyBullets, mParticles, mStars, mItems, missionScore, mFrame, missionRunning, missionPaused;
+    let mPlayer, mMeteors, mEnemies, mBullets, mEnemyBullets, mParticles, mStars, mItems, mFloatingTexts;
+    let missionScore, mFrame, missionRunning, missionPaused, mReqId;
 
     function resizeMission() {
         const rect = mCanvas.parentNode.getBoundingClientRect();
         if (rect.width === 0) return;
-        mCanvas.width = rect.width; mCanvas.height = rect.height - 45; 
+        mCanvas.width = rect.width; 
+        mCanvas.height = rect.height - 45; 
     }
     window.addEventListener('resize', () => { if(missionRunning) resizeMission(); });
 
@@ -1281,6 +1284,7 @@
 
     function exitMission() {
         missionRunning = false;
+        if(mReqId) cancelAnimationFrame(mReqId);
         document.getElementById('bottom-nav').style.display = 'flex';
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('screen-mission-menu').classList.add('active');
@@ -1307,7 +1311,16 @@
     }
 
     function initMStars() {
-        mStars = []; for(let i=0; i<50; i++) { mStars.push({ x: Math.random() * mCanvas.width, y: Math.random() * mCanvas.height, size: Math.random() * 2, speed: Math.random() * 3 + 1 }); }
+        mStars = []; 
+        for(let i=0; i<60; i++) { 
+            mStars.push({ 
+                x: Math.random() * mCanvas.width, 
+                y: Math.random() * mCanvas.height, 
+                size: Math.random() * 2 + 0.5, 
+                speed: Math.random() * 2.5 + 0.5,
+                color: Math.random() > 0.8 ? '#ff00cc' : (Math.random() > 0.5 ? '#00f3ff' : '#ffffff')
+            }); 
+        }
     }
 
     function startMission() {
@@ -1316,16 +1329,18 @@
         document.getElementById('mission-hint').style.display = 'block';
         
         mPlayer = { 
-            x: mCanvas.width/2, y: mCanvas.height - 80, size: 16, color: '#00f3ff', 
+            x: mCanvas.width/2, y: mCanvas.height - 80, size: 18, color: '#00f3ff', 
             fireRate: 12, fireTimer: 0,
             buffs: { fastFire: 0, multiShot: 0, invincible: 0 }
         };
-        mEnemies = []; mBullets = []; mEnemyBullets = []; mParticles = []; mItems = []; 
+        mMeteors = []; mEnemies = []; mBullets = []; mEnemyBullets = []; mParticles = []; mItems = []; mFloatingTexts = [];
         initMStars();
         
         missionScore = 0; mFrame = 0; missionRunning = true; missionPaused = false;
         document.getElementById('mission-score').innerText = missionScore;
         document.getElementById('mission-pause-btn').innerText = "⏸ Paused";
+        
+        if(mReqId) cancelAnimationFrame(mReqId);
         requestAnimationFrame(updateMission);
     }
 
@@ -1351,12 +1366,10 @@
         if(mPlayer.y > mCanvas.height - mPlayer.size) mPlayer.y = mCanvas.height - mPlayer.size;
     }
 
-    // 支援手機 Touch 與 Pointer 事件
     mCanvas.addEventListener('touchstart', (e) => {
         if(!missionRunning || missionPaused) return;
         e.preventDefault();
-        mIsDragging = true;
-        moveMPlayer(e);
+        mIsDragging = true; moveMPlayer(e);
         const hint = document.getElementById('mission-hint');
         if(hint) hint.style.display = 'none';
     }, {passive: false});
@@ -1387,8 +1400,85 @@
 
     function createMExplosion(x, y, color, count) {
         for(let i=0; i<count; i++) { 
-            mParticles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8, size: Math.random() * 3 + 1, color: color, alpha: 1 }); 
+            let angle = Math.random() * Math.PI * 2;
+            let speed = Math.random() * 6 + 1;
+            mParticles.push({ 
+                x: x, y: y, 
+                vx: Math.cos(angle) * speed, 
+                vy: Math.sin(angle) * speed, 
+                size: Math.random() * 4 + 1, 
+                color: color, 
+                alpha: 1.0,
+                decay: Math.random() * 0.03 + 0.02
+            }); 
         }
+    }
+
+    function addMFloatingText(x, y, text, color="#ffd700") {
+        mFloatingTexts.push({ x: x, y: y, text: text, color: color, alpha: 1.0, vy: -1.5 });
+    }
+
+    function spawnMItem(x, y) {
+        const rand = Math.random();
+        let type = 'fastFire';
+        let color = '#ffd700'; // Yellow
+        let label = '⚡';
+
+        if (rand < 0.35) {
+            type = 'fastFire'; color = '#ffd700'; label = '⚡';
+        } else if (rand < 0.70) {
+            type = 'multiShot'; color = '#00ff66'; label = '🔱';
+        } else if (rand < 0.90) {
+            type = 'invincible'; color = '#ffffff'; label = '🛡️';
+        } else {
+            type = 'bonusTech'; color = '#ff00cc'; label = '💎';
+        }
+
+        mItems.push({ x: x, y: y, type: type, color: color, label: label, size: 14, vy: 1.8 });
+    }
+
+    function spawnMeteor(x, y, tier = 3) {
+        // tier: 3 = Big, 2 = Medium, 1 = Small
+        let radius = tier === 3 ? 32 : (tier === 2 ? 20 : 12);
+        let hp = tier === 3 ? 12 : (tier === 2 ? 5 : 2);
+        let speed = (4 - tier) * 0.8 + Math.random() * 0.8;
+        let points = [];
+        let numVerts = 8 + Math.floor(Math.random() * 4);
+        for(let i=0; i<numVerts; i++) {
+            let a = (i / numVerts) * Math.PI * 2;
+            let r = radius * (0.8 + Math.random() * 0.4);
+            points.push({ x: Math.cos(a) * r, y: Math.sin(a) * r });
+        }
+
+        mMeteors.push({
+            x: x !== undefined ? x : Math.random() * (mCanvas.width - 40) + 20,
+            y: y !== undefined ? y : -radius - 10,
+            vx: (Math.random() - 0.5) * 1.5,
+            vy: speed,
+            tier: tier,
+            radius: radius,
+            hp: hp,
+            maxHp: hp,
+            rotation: 0,
+            vRot: (Math.random() - 0.5) * 0.04,
+            points: points
+        });
+    }
+
+    function spawnMEnemy() {
+        let size = 16;
+        let hp = 15 + Math.floor(mFrame / 600) * 5;
+        mEnemies.push({
+            x: Math.random() * (mCanvas.width - 60) + 30,
+            y: -size - 10,
+            vx: (Math.random() - 0.5) * 2,
+            vy: Math.random() * 1.2 + 1.2,
+            size: size,
+            hp: hp,
+            maxHp: hp,
+            fireTimer: 0,
+            fireInterval: Math.max(40, 90 - Math.floor(mFrame / 300) * 5)
+        });
     }
 
     function missionGameOver() {
@@ -1401,128 +1491,221 @@
 
     function updateMission() {
         if(!missionRunning || missionPaused) return; 
-        mCtx.clearRect(0, 0, mCanvas.width, mCanvas.height); mFrame++;
+        mCtx.clearRect(0, 0, mCanvas.width, mCanvas.height); 
+        mFrame++;
 
+        // 1. 強化效果倒數
         if (mPlayer.buffs.fastFire > 0) mPlayer.buffs.fastFire--;
         if (mPlayer.buffs.multiShot > 0) mPlayer.buffs.multiShot--;
         if (mPlayer.buffs.invincible > 0) mPlayer.buffs.invincible--;
 
-        // 背景星空
-        mCtx.fillStyle = '#fff';
-        mStars.forEach(star => {
-            star.y += star.speed; if (star.y > mCanvas.height) { star.y = 0; star.x = Math.random() * mCanvas.width; }
-            mCtx.globalAlpha = star.speed / 4; mCtx.fillRect(star.x, star.y, star.size, star.size);
-        }); mCtx.globalAlpha = 1.0;
+        // 2. 星空背景動態
+        mStars.forEach(s => {
+            s.y += s.speed;
+            if (s.y > mCanvas.height) { s.y = 0; s.x = Math.random() * mCanvas.width; }
+            mCtx.fillStyle = s.color;
+            mCtx.fillRect(s.x, s.y, s.size, s.size);
+        });
 
-        // 玩家發射子彈
-        if (mIsDragging) {
-            mPlayer.fireTimer++;
-            let currentFireRate = mPlayer.buffs.fastFire > 0 ? Math.max(4, mPlayer.fireRate / 2) : mPlayer.fireRate;
-            if (mPlayer.fireTimer >= currentFireRate) {
-                mPlayer.fireTimer = 0;
-                if (mPlayer.buffs.multiShot > 0) {
-                    mBullets.push({ x: mPlayer.x - 12, y: mPlayer.y - mPlayer.size, speed: 12, color: '#00ff66' });
-                    mBullets.push({ x: mPlayer.x, y: mPlayer.y - mPlayer.size - 6, speed: 12, color: '#00ff66' });
-                    mBullets.push({ x: mPlayer.x + 12, y: mPlayer.y - mPlayer.size, speed: 12, color: '#00ff66' });
-                } else {
-                    mBullets.push({ x: mPlayer.x, y: mPlayer.y - mPlayer.size, speed: 12, color: '#00f3ff' });
-                }
+        // 3. 戰機發射邏輯
+        let currentFireRate = mPlayer.buffs.fastFire > 0 ? 5 : mPlayer.fireRate;
+        mPlayer.fireTimer++;
+        if (mPlayer.fireTimer >= currentFireRate) {
+            mPlayer.fireTimer = 0;
+            if (mPlayer.buffs.multiShot > 0) {
+                // 3向散射子彈
+                mBullets.push({ x: mPlayer.x, y: mPlayer.y - 15, vx: 0, vy: -12, color: '#00ff66' });
+                mBullets.push({ x: mPlayer.x - 8, y: mPlayer.y - 10, vx: -3, vy: -11, color: '#00ff66' });
+                mBullets.push({ x: mPlayer.x + 8, y: mPlayer.y - 10, vx: 3, vy: -11, color: '#00ff66' });
+            } else {
+                mBullets.push({ x: mPlayer.x - 6, y: mPlayer.y - 15, vx: 0, vy: -12, color: '#00f3ff' });
+                mBullets.push({ x: mPlayer.x + 6, y: mPlayer.y - 15, vx: 0, vy: -12, color: '#00f3ff' });
             }
         }
 
-        // 產生敵機
-        if (mFrame % 35 === 0) {
-            let isShooter = Math.random() < 0.35;
-            mEnemies.push({
-                x: Math.random() * (mCanvas.width - 40) + 20, y: -20,
-                size: isShooter ? 18 : 14,
-                speed: isShooter ? 1.8 : 3.0,
-                hp: isShooter ? 3 : 1,
-                color: isShooter ? '#ff00cc' : '#ff5500',
-                isShooter: isShooter,
-                fireTimer: 0
-            });
+        // 4. 生成隕石與敵機
+        let meteorInterval = Math.max(25, 70 - Math.floor(mFrame / 200) * 3);
+        if (mFrame % meteorInterval === 0) {
+            spawnMeteor();
+        }
+        let enemyInterval = Math.max(120, 250 - Math.floor(mFrame / 400) * 10);
+        if (mFrame % enemyInterval === 0) {
+            spawnMEnemy();
         }
 
-        // 更新玩家子彈
+        // 5. 更新玩家子彈
         for (let i = mBullets.length - 1; i >= 0; i--) {
-            let b = mBullets[i]; b.y -= b.speed;
-            mCtx.fillStyle = b.color; mCtx.fillRect(b.x - 2, b.y - 6, 4, 12);
-            if (b.y < -10) mBullets.splice(i, 1);
+            let b = mBullets[i];
+            b.x += b.vx; b.y += b.vy;
+            mCtx.fillStyle = b.color;
+            mCtx.beginPath(); mCtx.arc(b.x, b.y, 3.5, 0, Math.PI * 2); mCtx.fill();
+
+            if (b.y < -10 || b.x < -10 || b.x > mCanvas.width + 10) {
+                mBullets.splice(i, 1);
+            }
         }
 
-        // 更新敵機
-        for (let i = mEnemies.length - 1; i >= 0; i--) {
-            let e = mEnemies[i]; e.y += e.speed;
-            
-            if (e.isShooter) {
-                e.fireTimer++;
-                if (e.fireTimer >= 80) {
-                    e.fireTimer = 0;
-                    mEnemyBullets.push({ x: e.x, y: e.y + e.size, speed: 4.5 });
-                }
-            }
+        // 6. 更新隕石與碰撞檢測
+        for (let i = mMeteors.length - 1; i >= 0; i--) {
+            let m = mMeteors[i];
+            m.x += m.vx; m.y += m.vy; m.rotation += m.vRot;
 
-            mCtx.fillStyle = e.color;
-            mCtx.beginPath(); mCtx.arc(e.x, e.y, e.size, 0, Math.PI * 2); mCtx.fill();
+            // 繪製隕石
+            mCtx.save();
+            mCtx.translate(m.x, m.y);
+            mCtx.rotate(m.rotation);
+            mCtx.strokeStyle = m.tier === 3 ? '#ff8800' : (m.tier === 2 ? '#ffcc00' : '#aaa');
+            mCtx.lineWidth = 2;
+            mCtx.fillStyle = 'rgba(25, 20, 15, 0.9)';
+            mCtx.beginPath();
+            m.points.forEach((pt, idx) => {
+                if (idx === 0) mCtx.moveTo(pt.x, pt.y);
+                else mCtx.lineTo(pt.x, pt.y);
+            });
+            mCtx.closePath();
+            mCtx.fill();
+            mCtx.stroke();
+            mCtx.restore();
 
-            // 子彈擊中敵機
+            // 子彈擊中隕石
             for (let j = mBullets.length - 1; j >= 0; j--) {
                 let b = mBullets[j];
-                let dist = Math.hypot(b.x - e.x, b.y - e.y);
-                if (dist < e.size + 4) {
-                    mBullets.splice(j, 1); e.hp--;
-                    if (e.hp <= 0) {
-                        createMExplosion(e.x, e.y, e.color, 15);
-                        missionScore += 10;
+                let dist = Math.hypot(m.x - b.x, m.y - b.y);
+                if (dist < m.radius + 3) {
+                    m.hp -= 1;
+                    mBullets.splice(j, 1);
+                    createMExplosion(b.x, b.y, m.tier === 3 ? '#ff8800' : '#ffcc00', 4);
+
+                    if (m.hp <= 0) {
+                        let reward = m.tier * 5;
+                        missionScore += reward;
                         document.getElementById('mission-score').innerText = missionScore;
-                        
-                        // 15% 機率掉落支援物資
-                        if (Math.random() < 0.15) {
-                            let r = Math.random();
-                            let type = r < 0.33 ? 'fastFire' : (r < 0.66 ? 'multiShot' : 'invincible');
-                            let color = type === 'fastFire' ? '#ffd700' : (type === 'multiShot' ? '#00ff66' : '#ffffff');
-                            mItems.push({ x: e.x, y: e.y, type: type, color: color, speed: 2 });
+                        addMFloatingText(m.x, m.y, `+${reward}`);
+                        createMExplosion(m.x, m.y, '#ff8800', m.tier * 8);
+
+                        // 隕石分裂機制
+                        if (m.tier > 1) {
+                            spawnMeteor(m.x - 10, m.y, m.tier - 1);
+                            spawnMeteor(m.x + 10, m.y, m.tier - 1);
                         }
 
-                        mEnemies.splice(i, 1);
+                        // 機率掉落支援物資
+                        if (Math.random() < 0.22) {
+                            spawnMItem(m.x, m.y);
+                        }
+
+                        mMeteors.splice(i, 1);
                         break;
                     }
                 }
             }
 
-            // 敵機撞擊玩家
-            if (mEnemies[i]) {
-                let pDist = Math.hypot(mPlayer.x - e.x, mPlayer.y - e.y);
-                if (pDist < mPlayer.size + e.size) {
+            // 隕石撞擊戰機
+            if (mMeteors[i]) {
+                let distP = Math.hypot(m.x - mPlayer.x, m.y - mPlayer.y);
+                if (distP < m.radius + mPlayer.size * 0.7) {
                     if (mPlayer.buffs.invincible > 0) {
-                        createMExplosion(e.x, e.y, e.color, 15);
-                        missionScore += 10;
+                        // 無敵護盾直接撞碎隕石
+                        missionScore += m.tier * 5;
                         document.getElementById('mission-score').innerText = missionScore;
-                        mEnemies.splice(i, 1);
+                        createMExplosion(m.x, m.y, '#ffffff', 20);
+                        mMeteors.splice(i, 1);
                     } else {
-                        createMExplosion(mPlayer.x, mPlayer.y, mPlayer.color, 30);
+                        createMExplosion(mPlayer.x, mPlayer.y, '#ff003c', 35);
                         missionGameOver();
                         return;
                     }
                 }
             }
 
-            if (e && e.y > mCanvas.height + 30) mEnemies.splice(i, 1);
+            // 移出螢幕刪除
+            if (mMeteors[i] && m.y > mCanvas.height + 50) {
+                mMeteors.splice(i, 1);
+            }
         }
 
-        // 更新敵軍雷射子彈
-        for (let i = mEnemyBullets.length - 1; i >= 0; i--) {
-            let eb = mEnemyBullets[i]; eb.y += eb.speed;
-            mCtx.fillStyle = '#ff003c'; mCtx.beginPath(); mCtx.arc(eb.x, eb.y, 4, 0, Math.PI * 2); mCtx.fill();
+        // 7. 更新敵機與碰撞檢測
+        for (let i = mEnemies.length - 1; i >= 0; i--) {
+            let e = mEnemies[i];
+            e.x += e.vx; e.y += e.vy;
+            if (e.x < e.size || e.x > mCanvas.width - e.size) e.vx *= -1;
 
-            let dist = Math.hypot(mPlayer.x - eb.x, mPlayer.y - eb.y);
-            if (dist < mPlayer.size + 4) {
+            // 敵機發射雷射
+            e.fireTimer++;
+            if (e.fireTimer >= e.fireInterval) {
+                e.fireTimer = 0;
+                mEnemyBullets.push({ x: e.x, y: e.y + e.size, vx: 0, vy: 5, color: '#ff003c' });
+            }
+
+            // 繪製敵機
+            mCtx.fillStyle = '#ff0055';
+            mCtx.beginPath();
+            mCtx.moveTo(e.x, e.y + e.size);
+            mCtx.lineTo(e.x - e.size, e.y - e.size);
+            mCtx.lineTo(e.x + e.size, e.y - e.size);
+            mCtx.closePath();
+            mCtx.fill();
+            mCtx.strokeStyle = '#ffffff';
+            mCtx.lineWidth = 1.5;
+            mCtx.stroke();
+
+            // 子彈擊中敵機
+            for (let j = mBullets.length - 1; j >= 0; j--) {
+                let b = mBullets[j];
+                let dist = Math.hypot(e.x - b.x, e.y - b.y);
+                if (dist < e.size + 4) {
+                    e.hp -= 1;
+                    mBullets.splice(j, 1);
+                    createMExplosion(b.x, b.y, '#ff0055', 4);
+
+                    if (e.hp <= 0) {
+                        missionScore += 25;
+                        document.getElementById('mission-score').innerText = missionScore;
+                        addMFloatingText(e.x, e.y, "+25", "#ff00cc");
+                        createMExplosion(e.x, e.y, '#ff0055', 25);
+                        spawnMItem(e.x, e.y);
+                        mEnemies.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+
+            // 敵機撞擊戰機
+            if (mEnemies[i]) {
+                let distP = Math.hypot(e.x - mPlayer.x, e.y - mPlayer.y);
+                if (distP < e.size + mPlayer.size * 0.7) {
+                    if (mPlayer.buffs.invincible > 0) {
+                        missionScore += 25;
+                        document.getElementById('mission-score').innerText = missionScore;
+                        createMExplosion(e.x, e.y, '#ffffff', 25);
+                        mEnemies.splice(i, 1);
+                    } else {
+                        createMExplosion(mPlayer.x, mPlayer.y, '#ff003c', 35);
+                        missionGameOver();
+                        return;
+                    }
+                }
+            }
+
+            if (mEnemies[i] && e.y > mCanvas.height + 50) {
+                mEnemies.splice(i, 1);
+            }
+        }
+
+        // 8. 更新敵方雷射子彈
+        for (let i = mEnemyBullets.length - 1; i >= 0; i--) {
+            let eb = mEnemyBullets[i];
+            eb.x += eb.vx; eb.y += eb.vy;
+            mCtx.fillStyle = eb.color;
+            mCtx.beginPath(); mCtx.arc(eb.x, eb.y, 4, 0, Math.PI * 2); mCtx.fill();
+
+            // 擊中玩家戰機
+            let distP = Math.hypot(eb.x - mPlayer.x, eb.y - mPlayer.y);
+            if (distP < mPlayer.size * 0.8) {
                 if (mPlayer.buffs.invincible > 0) {
-                    createMExplosion(eb.x, eb.y, '#ff003c', 6);
                     mEnemyBullets.splice(i, 1);
                 } else {
-                    createMExplosion(mPlayer.x, mPlayer.y, mPlayer.color, 30);
+                    createMExplosion(mPlayer.x, mPlayer.y, '#ff003c', 35);
                     missionGameOver();
                     return;
                 }
@@ -1531,46 +1714,127 @@
             }
         }
 
-        // 更新掉落物資
+        // 9. 更新支援物資箱
         for (let i = mItems.length - 1; i >= 0; i--) {
-            let item = mItems[i]; item.y += item.speed;
-            mCtx.fillStyle = item.color; mCtx.fillRect(item.x - 6, item.y - 6, 12, 12);
-            
-            let dist = Math.hypot(mPlayer.x - item.x, mPlayer.y - item.y);
-            if (dist < mPlayer.size + 10) {
-                mPlayer.buffs[item.type] = 300; // 獲得 5 秒增益
-                createMExplosion(item.x, item.y, item.color, 10);
+            let item = mItems[i];
+            item.y += item.vy;
+
+            // 繪製物資箱
+            mCtx.save();
+            mCtx.fillStyle = item.color;
+            mCtx.shadowColor = item.color;
+            mCtx.shadowBlur = 10;
+            mCtx.fillRect(item.x - item.size/2, item.y - item.size/2, item.size, item.size);
+            mCtx.fillStyle = '#000';
+            mCtx.font = '10px sans-serif';
+            mCtx.textAlign = 'center';
+            mCtx.textBaseline = 'middle';
+            mCtx.fillText(item.label, item.x, item.y);
+            mCtx.restore();
+
+            // 拾取物品
+            let distP = Math.hypot(item.x - mPlayer.x, item.y - mPlayer.y);
+            if (distP < item.size + mPlayer.size) {
+                if (item.type === 'fastFire') {
+                    mPlayer.buffs.fastFire = 480; // 8 秒
+                    addMFloatingText(mPlayer.x, mPlayer.y - 20, "RAPID FIRE!", "#ffd700");
+                } else if (item.type === 'multiShot') {
+                    mPlayer.buffs.multiShot = 480; // 8 秒
+                    addMFloatingText(mPlayer.x, mPlayer.y - 20, "SPREAD SHOT!", "#00ff66");
+                } else if (item.type === 'invincible') {
+                    mPlayer.buffs.invincible = 360; // 6 秒
+                    addMFloatingText(mPlayer.x, mPlayer.y - 20, "INVINCIBLE!", "#ffffff");
+                } else if (item.type === 'bonusTech') {
+                    missionScore += 30;
+                    document.getElementById('mission-score').innerText = missionScore;
+                    addMFloatingText(mPlayer.x, mPlayer.y - 20, "+30 TECH POINTS", "#ff00cc");
+                }
                 mItems.splice(i, 1);
             } else if (item.y > mCanvas.height + 20) {
                 mItems.splice(i, 1);
             }
         }
 
-        // 更新爆炸粒子
+        // 10. 更新爆炸粒子與浮動文字
         for (let i = mParticles.length - 1; i >= 0; i--) {
-            let p = mParticles[i]; p.x += p.vx; p.y += p.vy; p.alpha -= 0.03;
-            if (p.alpha <= 0) { mParticles.splice(i, 1); continue; }
-            mCtx.globalAlpha = p.alpha; mCtx.fillStyle = p.color;
-            mCtx.beginPath(); mCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); mCtx.fill();
+            let p = mParticles[i];
+            p.x += p.vx; p.y += p.vy; p.alpha -= p.decay;
+            if (p.alpha <= 0) {
+                mParticles.splice(i, 1);
+            } else {
+                mCtx.globalAlpha = p.alpha;
+                mCtx.fillStyle = p.color;
+                mCtx.beginPath(); mCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); mCtx.fill();
+                mCtx.globalAlpha = 1.0;
+            }
         }
-        mCtx.globalAlpha = 1.0;
 
-        // 繪製玩家戰機與無敵護盾
+        for (let i = mFloatingTexts.length - 1; i >= 0; i--) {
+            let ft = mFloatingTexts[i];
+            ft.y += ft.vy; ft.alpha -= 0.02;
+            if (ft.alpha <= 0) {
+                mFloatingTexts.splice(i, 1);
+            } else {
+                mCtx.globalAlpha = ft.alpha;
+                mCtx.fillStyle = ft.color;
+                mCtx.font = 'bold 12px sans-serif';
+                mCtx.textAlign = 'center';
+                mCtx.fillText(ft.text, ft.x, ft.y);
+                mCtx.globalAlpha = 1.0;
+            }
+        }
+
+        // 11. 繪製玩家戰機
+        drawMPlayer();
+
+        mReqId = requestAnimationFrame(updateMission);
+    }
+
+    function drawMPlayer() {
+        mCtx.save();
+        mCtx.translate(mPlayer.x, mPlayer.y);
+
+        // 無敵護盾光圈
+        if (mPlayer.buffs.invincible > 0) {
+            mCtx.strokeStyle = `rgba(255, 255, 255, ${0.6 + Math.sin(mFrame * 0.2) * 0.3})`;
+            mCtx.lineWidth = 3;
+            mCtx.shadowColor = '#ffffff';
+            mCtx.shadowBlur = 15;
+            mCtx.beginPath();
+            mCtx.arc(0, 0, mPlayer.size * 1.5, 0, Math.PI * 2);
+            mCtx.stroke();
+        }
+
+        // 戰機機身
+        mCtx.shadowColor = mPlayer.color;
+        mCtx.shadowBlur = 12;
         mCtx.fillStyle = mPlayer.color;
         mCtx.beginPath();
-        mCtx.moveTo(mPlayer.x, mPlayer.y - mPlayer.size);
-        mCtx.lineTo(mPlayer.x - mPlayer.size, mPlayer.y + mPlayer.size);
-        mCtx.lineTo(mPlayer.x + mPlayer.size, mPlayer.y + mPlayer.size);
-        mCtx.closePath(); mCtx.fill();
+        mCtx.moveTo(0, -mPlayer.size * 1.2);
+        mCtx.lineTo(-mPlayer.size, mPlayer.size);
+        mCtx.lineTo(0, mPlayer.size * 0.6);
+        mCtx.lineTo(mPlayer.size, mPlayer.size);
+        mCtx.closePath();
+        mCtx.fill();
 
-        if (mPlayer.buffs.invincible > 0) {
-            mCtx.strokeStyle = '#ffffff'; mCtx.lineWidth = 2;
-            mCtx.beginPath(); mCtx.arc(mPlayer.x, mPlayer.y, mPlayer.size + 8, 0, Math.PI * 2); mCtx.stroke();
-        }
+        // 駕駛艙高光
+        mCtx.fillStyle = '#ffffff';
+        mCtx.beginPath();
+        mCtx.arc(0, -mPlayer.size * 0.2, 3, 0, Math.PI * 2);
+        mCtx.fill();
 
-        requestAnimationFrame(updateMission);
+        // 尾焰
+        let flameH = Math.random() * 8 + 6;
+        mCtx.fillStyle = '#ff00cc';
+        mCtx.beginPath();
+        mCtx.moveTo(-mPlayer.size * 0.4, mPlayer.size * 0.7);
+        mCtx.lineTo(0, mPlayer.size * 0.7 + flameH);
+        mCtx.lineTo(mPlayer.size * 0.4, mPlayer.size * 0.7);
+        mCtx.closePath();
+        mCtx.fill();
+
+        mCtx.restore();
     }
 </script>
-
 </body>
 </html>
