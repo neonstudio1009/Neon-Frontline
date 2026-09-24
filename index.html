@@ -68,15 +68,15 @@
         /* 無人機採礦面板樣式 */
         .mining-dashboard {
             background: rgba(10, 13, 20, 0.9);
-            border: 2px solid #00f3ff;
-            border-radius: 15px;
-            padding: 30px 20px;
+            border: 1px solid #00f3ff;
+            border-radius: 12px;
+            padding: 18px 16px;
             text-align: center;
-            box-shadow: 0 0 20px rgba(0, 243, 255, 0.2) inset;
-            margin-bottom: 25px;
+            box-shadow: 0 0 16px rgba(0, 243, 255, 0.16) inset;
+            margin-bottom: 14px;
         }
         .yield-display {
-            font-size: 48px;
+            font-size: 36px;
             font-weight: bold;
             color: #ffcc00;
             text-shadow: 0 0 15px rgba(255, 204, 0, 0.6);
@@ -84,13 +84,13 @@
         .mining-btn-large {
             background: linear-gradient(135deg, #0055ff, #00f3ff);
             color: white;
-            font-size: 24px;
+            font-size: 16px;
             font-weight: bold;
             border: none;
-            border-radius: 12px;
-            padding: 20px 0;
+            border-radius: 8px;
+            padding: 12px 14px;
             width: 100%;
-            margin-top: 20px;
+            margin-top: 14px;
             cursor: pointer;
             box-shadow: 0 0 15px rgba(0, 243, 255, 0.6);
             transition: all 0.2s;
@@ -104,17 +104,19 @@
         
         /* 升級卡片 */
         .upgrade-grid {
-            display: flex;
-            gap: 15px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
             justify-content: space-between;
         }
         .upgrade-card {
-            flex: 1;
+            min-width: 0;
             background: rgba(0, 243, 255, 0.05);
             border: 1px solid rgba(0, 243, 255, 0.5);
-            border-radius: 10px;
-            padding: 15px;
+            border-radius: 8px;
+            padding: 10px 8px;
             text-align: center;
+            overflow: hidden;
             cursor: pointer;
             transition: all 0.3s;
         }
@@ -123,8 +125,10 @@
             border-color: #00f3ff;
             box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
         }
-        .card-icon { font-size: 30px; margin-bottom: 5px; }
-        .cost { margin-top: 10px; color: #ff5555; font-weight: bold; font-size: 14px; }
+        .upgrade-card h3 { font-size: 13px; line-height: 1.3; margin: 5px 0; }
+        .upgrade-card p { font-size: 11px; margin: 3px 0; color: #aaa; }
+        .card-icon { font-size: 24px; margin-bottom: 3px; }
+        .cost { margin-top: 7px; color: #ff5555; font-weight: bold; font-size: 10px; line-height: 1.3; overflow-wrap: anywhere; }
                 
         #game-canvas { width: 100%; flex: 1; display: block; }
         #sell-btn-overlay { position: absolute; background: rgba(255, 0, 60, 0.85); border: 1px solid #ff003c; color: #fff; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; z-index: 50; display: none; text-shadow: 0 0 5px #000; box-shadow: 0 0 10px rgba(255, 0, 60, 0.5); transform: translate(-50%, 0); transition: 0.1s; }
@@ -308,44 +312,44 @@
     </div>
 
     <div id="screen-hangar" class="screen hangar-screen">
-        <div class="hangar-title"><div><div class="section-kicker">FLEET CONFIGURATION</div><h2>戰機改裝車間</h2><div class="hangar-subtitle">用科技點數解鎖下一代戰鬥平台</div></div><div class="tech-points"><span id="hangar-tech-points">0</span> 點</div></div>
+        <div class="hangar-title"><div><div class="section-kicker">FLEET CONFIGURATION</div><h2>Fighter Hangar</h2><div class="hangar-subtitle">Unlock next-generation combat platforms with Tech Points</div></div><div class="tech-points"><span id="hangar-tech-points">0</span> Tech Points</div></div>
         <div class="fighter-list">
-            <article class="fighter-card active" id="fighter-scout"><div class="fighter-visual">◈</div><div class="fighter-info"><div class="fighter-name">藍色偵察艇</div><div class="fighter-tag">STANDARD / ACTIVE</div><div class="fighter-desc">平衡型初始戰機，速度與火力均衡。</div></div><button class="fighter-action equipped" id="fighter-btn-scout" onclick="equipFighter('scout')">使用中</button></article>
-            <article class="fighter-card" id="fighter-heavy"><div class="fighter-visual">▣</div><div class="fighter-info"><div class="fighter-name">重裝突擊艦</div><div class="fighter-tag">ARMOR / SPREAD SHOT</div><div class="fighter-desc">移動速度降低 25%，自帶大範圍散彈；擁有 2 滴生命，可承受一次隕石撞擊。</div></div><button class="fighter-action" id="fighter-btn-heavy" onclick="unlockOrEquipFighter('heavy')">解鎖 1000</button></article>
-            <article class="fighter-card" id="fighter-stealth"><div class="fighter-visual">◇</div><div class="fighter-info"><div class="fighter-name">光速隱形機</div><div class="fighter-tag">SPEED / OPTICAL CLOAK</div><div class="fighter-desc">移動速度提升 70%；每 15 秒自動進入 3 秒光學隱形，期間完全無敵。</div></div><button class="fighter-action" id="fighter-btn-stealth" onclick="unlockOrEquipFighter('stealth')">解鎖 2000</button></article>
+            <article class="fighter-card active" id="fighter-scout"><div class="fighter-visual">◈</div><div class="fighter-info"><div class="fighter-name">Blue Scout</div><div class="fighter-tag">STANDARD / ACTIVE</div><div class="fighter-desc">A balanced starter fighter with reliable speed and firepower.</div></div><button class="fighter-action equipped" id="fighter-btn-scout" onclick="equipFighter('scout')">Equipped</button></article>
+            <article class="fighter-card" id="fighter-heavy"><div class="fighter-visual">▣</div><div class="fighter-info"><div class="fighter-name">Heavy Assault Cruiser</div><div class="fighter-tag">ARMOR / SPREAD SHOT</div><div class="fighter-desc">25% slower movement, built-in wide spread shot, and 2 HP to survive one meteor impact.</div></div><button class="fighter-action" id="fighter-btn-heavy" onclick="unlockOrEquipFighter('heavy')">Unlock 1000</button></article>
+            <article class="fighter-card" id="fighter-stealth"><div class="fighter-visual">◇</div><div class="fighter-info"><div class="fighter-name">Lightspeed Cloak</div><div class="fighter-tag">SPEED / OPTICAL CLOAK</div><div class="fighter-desc">70% faster movement; automatically becomes invincible for 3 seconds every 15 seconds.</div></div><button class="fighter-action" id="fighter-btn-stealth" onclick="unlockOrEquipFighter('stealth')">Unlock 2000</button></article>
         </div>
     </div>
 
     <div id="mining-screen" class="screen mining-screen">
-        <h1 style="color: #00f3ff; text-shadow: 0 0 10px #00f3ff; margin-bottom: 20px;">無人機星際礦場</h1>
+        <h1 style="color: #00f3ff; text-shadow: 0 0 10px #00f3ff; margin-bottom: 14px;">Drone Mining Hub</h1>
         
         <div class="mining-dashboard">
-            <div class="section-kicker">AUTONOMOUS EXTRACTION UNIT</div><h2 style="color: #ccc; margin: 10px 0;">指揮官，歡迎回來</h2>
+            <div class="section-kicker">AUTONOMOUS EXTRACTION UNIT</div><h2 style="color: #ccc; margin: 8px 0;">Commander, welcome back</h2>
             <div class="yield-display">
-                <span id="offline-yield">0</span> <span style="font-size: 16px;">科技點</span>
+                <span id="offline-yield">0</span> <span style="font-size: 14px;">Tech Points</span>
             </div>
-            <p style="margin: 10px 0; color: #888;">離線時間：<span id="offline-time">0</span> 分鐘</p>
+            <p style="margin: 10px 0; color: #888;">Offline time: <span id="offline-time">0</span> min</p>
             
-            <button class="mining-btn-large" onclick="claimMiningRewards()">部署無人機並收取</button>
+            <button class="mining-btn-large" onclick="claimMiningRewards()">Deploy Drones &amp; Collect</button>
         </div>
     
         <div class="upgrade-grid">
             <div class="upgrade-card" onclick="upgradeMiningSpeed()">
                 <div class="card-icon">⚡</div>
-                <h3>升級採集速度</h3>
-                <p>目前等級：<span id="speed-lvl">1</span></p>
-                <p>效率：<span id="speed-val">10</span>/小時</p>
-                <div class="cost">升級花費: <span id="speed-cost">100</span></div>
+                <h3>Mining Speed</h3>
+                <p>Level: <span id="speed-lvl">1</span></p>
+                <p>Rate: <span id="speed-val">10</span>/hr</p>
+                <div class="cost">Upgrade cost: <span id="speed-cost">100</span></div>
             </div>
             <div class="upgrade-card" onclick="upgradeMiningCap()">
                 <div class="card-icon">📦</div>
-                <h3>升級儲存上限</h3>
-                <p>目前等級：<span id="cap-lvl">1</span></p>
-                <p>上限：<span id="cap-val">500</span></p>
-                <div class="cost">升級花費: <span id="cap-cost">150</span></div>
+                <h3>Storage Capacity</h3>
+                <p>Level: <span id="cap-lvl">1</span></p>
+                <p>Capacity: <span id="cap-val">500</span></p>
+                <div class="cost">Upgrade cost: <span id="cap-cost">150</span></div>
             </div>
         </div>
-        <button class="btn" style="margin-top: auto;" onclick="switchTab('levels', document.getElementById('nav-btn-levels'))">返回基地</button>
+        <button class="btn" style="margin-top: auto;" onclick="switchTab('levels', document.getElementById('nav-btn-levels'))">Return to Base</button>
     </div>
     
     <div id="screen-battle" class="screen">
@@ -432,8 +436,8 @@
         <button class="nav-btn active" id="nav-btn-levels" onclick="switchTab('levels', this)"><span>⎈</span><span>Battle</span></button>
         <button class="nav-btn" id="nav-btn-mission" onclick="switchTab('mission-menu', this)"><span>🚀</span><span>Mission</span></button>
         <button class="nav-btn" id="nav-btn-upgrades" onclick="switchTab('upgrades', this)"><span>⇪</span><span>Upgrade</span></button>
-        <button class="nav-btn" id="nav-btn-hangar" onclick="switchTab('hangar', this)"><span>▣</span><span>車間</span></button>
-        <button class="nav-btn" id="nav-btn-mining" onclick="switchTab('mining', this)"><span>◌</span><span>採礦</span></button>
+        <button class="nav-btn" id="nav-btn-hangar" onclick="switchTab('hangar', this)"><span>▣</span><span>Hangar</span></button>
+        <button class="nav-btn" id="nav-btn-mining" onclick="switchTab('mining', this)"><span>◌</span><span>Mining</span></button>
     </div>
 
     <div id="modal-overlay">
@@ -555,7 +559,7 @@
             const unlocked = metaData.fighters.unlocked.includes(id);
             const equipped = metaData.fighters.equipped === id;
             button.className = `fighter-action ${equipped ? 'equipped' : ''} ${unlocked ? '' : 'locked'}`;
-            button.innerText = equipped ? '使用中' : unlocked ? '切換戰機' : `解鎖 ${id === 'heavy' ? 1000 : 2000}`;
+            button.innerText = equipped ? 'Equipped' : unlocked ? 'Select' : `Unlock ${id === 'heavy' ? 1000 : 2000}`;
         });
         document.querySelectorAll('.fighter-card').forEach(card => card.classList.remove('active'));
         document.getElementById(`fighter-${metaData.fighters.equipped}`).classList.add('active');
@@ -563,7 +567,7 @@
     function unlockOrEquipFighter(id) {
         const cost = id === 'heavy' ? 1000 : 2000;
         if (!metaData.fighters.unlocked.includes(id)) {
-            if (metaData.techPoints < cost) { alert(`科技點數不足，還需要 ${cost - metaData.techPoints} 點。`); return; }
+            if (metaData.techPoints < cost) { alert(`Not enough Tech Points. You need ${cost - metaData.techPoints} more.`); return; }
             metaData.techPoints -= cost; metaData.fighters.unlocked.push(id);
         }
         equipFighter(id);
@@ -725,7 +729,7 @@
         if (miningData.unclaimedRewards > 0) {
             const reward = miningData.unclaimedRewards;
             metaData.techPoints += reward;
-            alert(`離線採集完成！獲得 +${reward} 科技點數。`);
+            alert(`Offline mining complete! You received +${reward} Tech Points.`);
             miningData.unclaimedRewards = 0;
             miningData.lastLogin = Date.now();
             localStorage.setItem('lastLogin', miningData.lastLogin.toString());
