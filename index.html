@@ -724,8 +724,9 @@
         document.getElementById('offline-yield').innerText = miningData.unclaimedRewards;
         document.getElementById('offline-time').innerText = Math.floor(diffHours * 60);
         updateMiningUI();
-        
-        profile.lastLogin = now; saveProgress();
+        // Keep the checkpoint unchanged while browsing tabs or reopening the panel.
+        // It advances only after the player collects, so closing the game accrues rewards.
+        profile.lastLogin = profile.lastLogin || now;
     }
     
     function claimMiningRewards() {
@@ -734,8 +735,9 @@
             metaData.techPoints += reward;
             alert(`Offline mining complete! You received +${reward} Tech Points.`);
             miningData.unclaimedRewards = 0;
-            miningData.lastLogin = Date.now();
-            localStorage.setItem('lastLogin', miningData.lastLogin.toString());
+            const profile = getMiningProfile();
+            profile.lastLogin = Date.now();
+            saveProgress();
             
             document.getElementById('offline-yield').innerText = "0";
             document.getElementById('offline-time').innerText = "0";
