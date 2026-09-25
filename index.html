@@ -218,8 +218,23 @@
 
         /* 底部導航 */
         #bottom-nav { height: 60px; background-color: #0a0d14; border-top: 1px solid #00f3ff; display: flex; justify-content: space-around; align-items: center; flex-shrink: 0; display: none; }
-        .nav-btn { background: none; border: none; color: #777; font-size: 14px; cursor: pointer; flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        #bottom-nav { overflow-x: auto; overflow-y: hidden; justify-content: flex-start; scrollbar-width: none; }
+        #bottom-nav::-webkit-scrollbar { display: none; }
+        .nav-btn { background: none; border: none; color: #777; font-size: 14px; cursor: pointer; flex: 0 0 78px; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; white-space: nowrap; }
         .nav-btn.active { color: #00f3ff; text-shadow: 0 0 8px #00f3ff; border-bottom: 3px solid #00f3ff; }
+        .feature-screen { gap: 14px; padding: 16px; overflow-y: auto; }
+        .feature-header { display:flex; justify-content:space-between; align-items:flex-end; border-bottom:1px solid rgba(0,243,255,.3); padding-bottom:12px; }
+        .feature-header h2 { color:#00f3ff; font-size:22px; text-shadow:0 0 10px #00f3ff; }
+        .feature-card { background:linear-gradient(135deg,rgba(0,243,255,.1),rgba(10,13,20,.9)); border:1px solid rgba(0,243,255,.45); border-radius:10px; padding:16px; }
+        .feature-card h3 { color:#fff; margin-bottom:8px; }
+        .feature-card p { color:#aab7c5; font-size:12px; line-height:1.5; }
+        .feature-action { width:100%; margin-top:14px; padding:11px; border:1px solid #ffd700; border-radius:6px; color:#ffd700; background:rgba(255,215,0,.1); font-weight:bold; cursor:pointer; }
+        .feature-action:disabled { opacity:.45; cursor:not-allowed; }
+        .loot-result { min-height:48px; margin-top:12px; color:#ffd700; text-align:center; font-weight:bold; line-height:1.5; }
+        .relic-list { display:flex; flex-direction:column; gap:10px; }
+        .relic-item { border:1px solid rgba(255,0,204,.45); border-radius:8px; padding:12px; background:rgba(255,0,204,.06); }
+        .relic-item h3 { color:#ff00cc; }
+        .relic-item p { margin-top:4px; }
 
         /* 共用彈出視窗 */
         #modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 1000; display: none; justify-content: center; align-items: center; }
@@ -322,9 +337,21 @@
             <article class="fighter-card" id="fighter-heavy"><div class="fighter-visual">▣</div><div class="fighter-info"><div class="fighter-name">Heavy Assault Cruiser</div><div class="fighter-tag">ARMOR / SPREAD SHOT</div><div class="fighter-desc">25% slower movement, built-in wide spread shot, and 2 HP to survive one meteor impact.</div></div><button class="fighter-action" id="fighter-btn-heavy" onclick="unlockOrEquipFighter('heavy')">Unlock 1000</button></article>
             <article class="fighter-card" id="fighter-stealth"><div class="fighter-visual">◇</div><div class="fighter-info"><div class="fighter-name">Lightspeed Cloak</div><div class="fighter-tag">SPEED / OPTICAL CLOAK</div><div class="fighter-desc">70% faster movement; automatically becomes invincible for 3 seconds every 15 seconds.</div></div><button class="fighter-action" id="fighter-btn-stealth" onclick="unlockOrEquipFighter('stealth')">Unlock 2000</button></article>
         </div>
-    </div>
+  </div>
 
-    <div id="mining-screen" class="screen mining-screen">
+  <div id="screen-gacha" class="screen feature-screen">
+    <div class="feature-header"><div><div class="section-kicker">SUPPLY DROP</div><h2>Armory Gacha</h2></div><div class="tech-points"><span id="gacha-tech-points">0</span> TP</div></div>
+    <div class="feature-card"><h3>物資空投</h3><p>Spend 500 Tech Points to open a random supply crate. Rewards range from point refunds to rare starting items and secret towers.</p><button class="feature-action" id="gacha-button" onclick="openGacha()">Open Supply Drop · 500 TP</button><div class="loot-result" id="gacha-result">Your next drop is waiting.</div></div>
+    <div class="feature-card"><h3>解鎖進度</h3><p id="gacha-unlocks">Secret defenses: 0 / 2</p><p>Rare consumables are automatically stored for your next deployment.</p></div>
+  </div>
+
+  <div id="screen-relics" class="screen feature-screen">
+    <div class="feature-header"><div><div class="section-kicker">CROSS-MODE ARTIFACTS</div><h2>Ancient Relics</h2></div><div class="tech-points"><span id="relic-key-count">0</span> Keys</div></div>
+    <div class="feature-card"><h3>神器鑰匙</h3><p>Earn keys by surviving 3 minutes in Star Breakout or defeating Tower Defense Wave 30 bosses.</p><button class="feature-action" id="relic-button" onclick="openRelicChest()">Open Relic Chest · 1 Key</button><div class="loot-result" id="relic-result">No relic equipped yet.</div></div>
+    <div class="relic-list" id="relic-list"></div>
+  </div>
+  
+  <div id="mining-screen" class="screen mining-screen">
         <h1 style="color: #00f3ff; text-shadow: 0 0 10px #00f3ff; margin-bottom: 14px;">Drone Mining Hub</h1>
         
         <div class="mining-dashboard">
@@ -439,8 +466,10 @@
         <button class="nav-btn active" id="nav-btn-levels" onclick="switchTab('levels', this)"><span>⎈</span><span>Battle</span></button>
         <button class="nav-btn" id="nav-btn-mission" onclick="switchTab('mission-menu', this)"><span>🚀</span><span>Mission</span></button>
         <button class="nav-btn" id="nav-btn-upgrades" onclick="switchTab('upgrades', this)"><span>⇪</span><span>Upgrade</span></button>
-        <button class="nav-btn" id="nav-btn-hangar" onclick="switchTab('hangar', this)"><span>▣</span><span>Hangar</span></button>
-        <button class="nav-btn" id="nav-btn-mining" onclick="switchTab('mining', this)"><span>◌</span><span>Mining</span></button>
+ <button class="nav-btn" id="nav-btn-hangar" onclick="switchTab('hangar', this)"><span>▣</span><span>Hangar</span></button>
+ <button class="nav-btn" id="nav-btn-mining" onclick="switchTab('mining', this)"><span>◌</span><span>Mining</span></button>
+ <button class="nav-btn" id="nav-btn-gacha" onclick="switchTab('gacha', this)"><span>◇</span><span>Gacha</span></button>
+ <button class="nav-btn" id="nav-btn-relics" onclick="switchTab('relics', this)"><span>✦</span><span>Relics</span></button>
     </div>
 
     <div id="modal-overlay">
@@ -472,7 +501,9 @@
                 'sniper':     { id: 'sniper', title: 'Sniper Tower', level: 1, maxStar: 1, baseDmg: 30, dmgGrowth: 10.0 }
             },
             fighters: { unlocked: ['scout'], equipped: 'scout' },
-            mining: { lastLogin: Date.now(), speedLvl: 1, capLvl: 1 }
+            mining: { lastLogin: Date.now(), speedLvl: 1, capLvl: 1 },
+            gacha: { unlockedTowers: [], rareItems: { laserStart: 0, energyBoost: 0 } },
+            relics: { keys: 0, owned: [] }
         };
     }
 
@@ -485,6 +516,9 @@
         else { metaData = getDefaultMetaData(); saveProgress(); }
         metaData.fighters = metaData.fighters || { unlocked: ['scout'], equipped: 'scout' };
         metaData.mining = metaData.mining || { lastLogin: Date.now(), speedLvl: 1, capLvl: 1 };
+        metaData.gacha = { unlockedTowers: [], rareItems: { laserStart: 0, energyBoost: 0 }, ...(metaData.gacha || {}) };
+        metaData.gacha.rareItems = { laserStart: 0, energyBoost: 0, ...(metaData.gacha.rareItems || {}) };
+        metaData.relics = { keys: 0, owned: [], ...(metaData.relics || {}) };
         initIdleMining();
         document.getElementById('display-username').innerText = currentUser;
         document.getElementById('display-username-mission').innerText = currentUser;
@@ -577,6 +611,51 @@
     }
     function equipFighter(id) { if (!metaData.fighters.unlocked.includes(id)) return; metaData.fighters.equipped = id; saveProgress(); renderHangar(); }
 
+    const GACHA_TOWERS = { plasma: 'Plasma Chain Tower', blackhole: 'Black Hole Generator' };
+    const RELIC_DATA = {
+        battery: { name: 'Hyperspace Battery', effect: 'Tower energy recovery +10%; fighter fire rate +5%.' },
+        armor: { name: 'Nano Armor Plate', effect: 'Base HP +2; fighter starts with one shield.' },
+        greed: { name: 'Greed Collector', effect: 'All Tech Points gained permanently increase by 20%.' }
+    };
+    function renderGacha() {
+        document.getElementById('gacha-tech-points').innerText = metaData.techPoints || 0;
+        document.getElementById('gacha-unlocks').innerText = `Secret defenses: ${metaData.gacha.unlockedTowers.length} / 2`;
+        document.getElementById('gacha-button').disabled = (metaData.techPoints || 0) < 500;
+    }
+    function openGacha() {
+        if (metaData.techPoints < 500) return;
+        metaData.techPoints -= 500;
+        const roll = Math.random(); let message;
+        if (roll < 0.05) {
+            const id = Math.random() < 0.5 ? 'plasma' : 'blackhole';
+            if (!metaData.gacha.unlockedTowers.includes(id)) metaData.gacha.unlockedTowers.push(id);
+            message = `EPIC DROP: ${GACHA_TOWERS[id]} unlocked!`;
+        } else if (roll < 0.25) {
+            const item = Math.random() < 0.5 ? 'laserStart' : 'energyBoost'; metaData.gacha.rareItems[item]++;
+            message = `RARE DROP: ${item === 'laserStart' ? 'Starting Laser Tower' : 'Opening Energy +5'} added!`;
+        } else {
+            const refund = 100; metaData.techPoints += refund; message = `COMMON DROP: ${refund} Tech Points returned.`;
+        }
+        saveProgress(); document.getElementById('gacha-result').innerText = message; renderGacha();
+    }
+    function renderRelics() {
+        document.getElementById('relic-key-count').innerText = metaData.relics.keys;
+        document.getElementById('relic-button').disabled = metaData.relics.keys < 1;
+        document.getElementById('relic-list').innerHTML = metaData.relics.owned.length ? metaData.relics.owned.map(id => `<div class="relic-item"><h3>${RELIC_DATA[id].name}</h3><p>${RELIC_DATA[id].effect}</p></div>`).join('') : '<div class="feature-card"><p>Defeat Wave 30 bosses or survive 3 minutes to find a key.</p></div>';
+    }
+    function grantRelicKey(source) {
+        metaData.relics.keys = (metaData.relics.keys || 0) + 1;
+        saveProgress();
+        if (document.getElementById('relic-result')) document.getElementById('relic-result').innerText = `Ancient Relic Key found: ${source}`;
+    }
+    function openRelicChest() {
+        if (metaData.relics.keys < 1) return;
+        const available = Object.keys(RELIC_DATA).filter(id => !metaData.relics.owned.includes(id));
+        if (!available.length) { document.getElementById('relic-result').innerText = 'All relics collected.'; return; }
+        metaData.relics.keys--; const id = available[Math.floor(Math.random() * available.length)]; metaData.relics.owned.push(id);
+        saveProgress(); document.getElementById('relic-result').innerText = `RELIC ACQUIRED: ${RELIC_DATA[id].name}`; renderRelics();
+    }
+
     function switchTab(tabName, btnElement) { 
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); 
         const target = document.getElementById('screen-' + tabName) || document.getElementById(tabName === 'mining' ? 'mining-screen' : 'screen-' + tabName);
@@ -585,6 +664,8 @@
         if (btnElement) btnElement.classList.add('active'); 
         if (tabName === 'upgrades') renderUpgrades();
         if (tabName === 'hangar') renderHangar();
+        if (tabName === 'gacha') renderGacha();
+        if (tabName === 'relics') renderRelics();
         if (tabName === 'mining') { initIdleMining(); updateMiningUI(); }
     }
 
@@ -985,8 +1066,9 @@
 
     function endWave() {
         let finWave = gameState.wave;
-        let reward = (finWave % 10 === 0) ? 50 : 10;
-        metaData.techPoints += reward; gameState.earnedPoints += reward;
+  let reward = (finWave % 10 === 0) ? 50 : 10;
+  metaData.techPoints += reward; gameState.earnedPoints += reward;
+  if (finWave >= 30 && finWave % 10 === 0) grantRelicKey(`Wave ${finWave} boss`);
         gameState.wave++; gameState.enemiesSpawned = 0; gameState.spawnTimer = 0;
         
         document.getElementById('current-wave').innerText = gameState.wave;
