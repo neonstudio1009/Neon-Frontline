@@ -218,9 +218,13 @@
 
         /* 底部導航 */
         #bottom-nav { height: 60px; background-color: #0a0d14; border-top: 1px solid #00f3ff; display: flex; justify-content: space-around; align-items: center; flex-shrink: 0; display: none; }
-        #bottom-nav { overflow-x: auto; overflow-y: hidden; justify-content: flex-start; scrollbar-width: none; }
+        #bottom-nav { overflow-x: auto; overflow-y: hidden; justify-content: flex-start; scrollbar-width: thin; scrollbar-color: #00f3ff #0a0d14; overscroll-behavior-x: contain; touch-action: pan-x; }
+  #bottom-nav { cursor: grab; }
+  #bottom-nav.dragging { cursor: grabbing; }
         #bottom-nav::-webkit-scrollbar { display: none; }
         .nav-btn { background: none; border: none; color: #777; font-size: 14px; cursor: pointer; flex: 0 0 78px; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; white-space: nowrap; }
+  .secret-card { display: none; }
+  .secret-card.unlocked { display: flex; }
         .nav-btn.active { color: #00f3ff; text-shadow: 0 0 8px #00f3ff; border-bottom: 3px solid #00f3ff; }
         .feature-screen { gap: 14px; padding: 16px; overflow-y: auto; }
         .feature-header { display:flex; justify-content:space-between; align-items:flex-end; border-bottom:1px solid rgba(0,243,255,.3); padding-bottom:12px; }
@@ -438,8 +442,10 @@
             <div class="card" data-type="machineGun"><div class="card-cost">3</div><canvas class="card-icon-canvas" width="40" height="40"></canvas><div class="card-name">Gun</div></div>
             <div class="card" data-type="laser"><div class="card-cost">5</div><canvas class="card-icon-canvas" width="40" height="40"></canvas><div class="card-name">Lazer</div></div>
             <div class="card" data-type="ice"><div class="card-cost">4</div><canvas class="card-icon-canvas" width="40" height="40"></canvas><div class="card-name">Freeze</div></div>
-            <div class="card" data-type="sniper"><div class="card-cost">6</div><canvas class="card-icon-canvas" width="40" height="40"></canvas><div class="card-name">Sniper</div></div>
-        </div>
+  <div class="card" data-type="sniper"><div class="card-cost">6</div><canvas class="card-icon-canvas" width="40" height="40"></canvas><div class="card-name">Sniper</div></div>
+  <div class="card secret-card" data-type="plasma"><div class="card-cost">7</div><canvas class="card-icon-canvas" width="40" height="40"></canvas><div class="card-name">Plasma</div></div>
+  <div class="card secret-card" data-type="blackhole"><div class="card-cost">8</div><canvas class="card-icon-canvas" width="40" height="40"></canvas><div class="card-name">Black Hole</div></div>
+  </div>
         <div id="drag-icon"><canvas id="drag-canvas" width="50" height="50"></canvas></div>
     </div>
 
@@ -498,8 +504,10 @@
                 'machineGun': { id: 'machineGun', title: 'Gun Tower', level: 1, maxStar: 1, baseDmg: 6, dmgGrowth: 2.0 },
                 'laser':      { id: 'laser', title: 'Lazer Tower', level: 1, maxStar: 1, baseDmg: 0.4, dmgGrowth: 0.2 },
                 'ice':        { id: 'ice', title: 'Freeze Tower', level: 1, maxStar: 1, baseDmg: 3, dmgGrowth: 1.5 },
-                'sniper':     { id: 'sniper', title: 'Sniper Tower', level: 1, maxStar: 1, baseDmg: 30, dmgGrowth: 10.0 }
-            },
+  'sniper':     { id: 'sniper', title: 'Sniper Tower', level: 1, maxStar: 1, baseDmg: 30, dmgGrowth: 10.0 },
+  'plasma':     { id: 'plasma', title: 'Plasma Chain Tower', level: 1, maxStar: 1, baseDmg: 18, dmgGrowth: 7.0 },
+  'blackhole':  { id: 'blackhole', title: 'Black Hole Generator', level: 1, maxStar: 1, baseDmg: 12, dmgGrowth: 5.0 }
+  },
             fighters: { unlocked: ['scout'], equipped: 'scout' },
             mining: { lastLogin: Date.now(), speedLvl: 1, capLvl: 1 },
             gacha: { unlockedTowers: [], rareItems: { laserStart: 0, energyBoost: 0 } },
@@ -519,6 +527,11 @@
         metaData.gacha = { unlockedTowers: [], rareItems: { laserStart: 0, energyBoost: 0 }, ...(metaData.gacha || {}) };
         metaData.gacha.rareItems = { laserStart: 0, energyBoost: 0, ...(metaData.gacha.rareItems || {}) };
         metaData.relics = { keys: 0, owned: [], ...(metaData.relics || {}) };
+        metaData.gacha.unlockedTowers.forEach(id => {
+            if (!metaData.towers[id]) metaData.towers[id] = id === 'plasma'
+                ? { id, title: 'Plasma Chain Tower', level: 1, maxStar: 1, baseDmg: 18, dmgGrowth: 7.0 }
+                : { id, title: 'Black Hole Generator', level: 1, maxStar: 1, baseDmg: 12, dmgGrowth: 5.0 };
+        });
         initIdleMining();
         document.getElementById('display-username').innerText = currentUser;
         document.getElementById('display-username-mission').innerText = currentUser;
@@ -621,15 +634,23 @@
         document.getElementById('gacha-tech-points').innerText = metaData.techPoints || 0;
         document.getElementById('gacha-unlocks').innerText = `Secret defenses: ${metaData.gacha.unlockedTowers.length} / 2`;
         document.getElementById('gacha-button').disabled = (metaData.techPoints || 0) < 500;
+        document.querySelectorAll('.secret-card').forEach(card => card.classList.toggle('unlocked', metaData.gacha.unlockedTowers.includes(card.dataset.type)));
     }
     function openGacha() {
         if (metaData.techPoints < 500) return;
         metaData.techPoints -= 500;
         const roll = Math.random(); let message;
-        if (roll < 0.05) {
+        if (roll < 0.01) {
+            metaData.relics.keys = (metaData.relics.keys || 0) + 1;
+            message = 'MYTHIC DROP: Ancient Relic Key acquired!';
+            renderRelics();
+        } else if (roll < 0.06) {
             const id = Math.random() < 0.5 ? 'plasma' : 'blackhole';
             if (!metaData.gacha.unlockedTowers.includes(id)) metaData.gacha.unlockedTowers.push(id);
-            message = `EPIC DROP: ${GACHA_TOWERS[id]} unlocked!`;
+            if (!metaData.towers[id]) metaData.towers[id] = id === 'plasma'
+                ? { id, title: 'Plasma Chain Tower', level: 1, maxStar: 1, baseDmg: 18, dmgGrowth: 7.0 }
+                : { id, title: 'Black Hole Generator', level: 1, maxStar: 1, baseDmg: 12, dmgGrowth: 5.0 };
+            message = `EPIC DROP: ${GACHA_TOWERS[id]} unlocked and added to Upgrade!`;
         } else if (roll < 0.25) {
             const item = Math.random() < 0.5 ? 'laserStart' : 'energyBoost'; metaData.gacha.rareItems[item]++;
             message = `RARE DROP: ${item === 'laserStart' ? 'Starting Laser Tower' : 'Opening Energy +5'} added!`;
@@ -785,8 +806,10 @@
         'machineGun': { cost: 3, color: '#00f3ff', range: 100, fireRate: 30, type: 'projectile', bulletSpeed: 5, drawIcon: drawMachineGunIcon },
         'laser':      { cost: 5, color: '#ff00cc', range: 120, fireRate: 1, type: 'laser', drawIcon: drawLaserIcon },
         'ice':        { cost: 4, color: '#0066ff', range: 90, fireRate: 60, type: 'aoe', slowEffect: 0.5, drawIcon: drawIceIcon },
-        'sniper':     { cost: 6, color: '#ffaa00', range: 250, fireRate: 120, type: 'projectile', bulletSpeed: 10, drawIcon: drawSniperIcon }
-    };
+'sniper':     { cost: 6, color: '#ffaa00', range: 250, fireRate: 120, type: 'projectile', bulletSpeed: 10, drawIcon: drawSniperIcon },
+  'plasma':     { cost: 7, color: '#00ff99', range: 145, fireRate: 45, type: 'chain', chainCount: 3, drawIcon: drawLaserIcon },
+  'blackhole':  { cost: 8, color: '#9b5cff', range: 110, fireRate: 90, type: 'aoe', slowEffect: 0.35, drawIcon: drawIceIcon }
+  };
 
     // 離線採礦狀態管理
     const miningData = { unclaimedRewards: 0, baseSpeed: 70, baseCap: 500 };
@@ -1224,8 +1247,14 @@
         let debuffDmgMod = 1 - (gameState.debuffs['towerDmgDown'] || 0) * 0.15;
         finalDmg = finalDmg * mul * Math.max(0.1, debuffDmgMod);
 
-        if (tower.card.type === 'projectile' || tower.card.type === 'aoe') { gameState.bullets.push({ x: tower.x, y: tower.y, target: target, speed: tower.card.bulletSpeed || 5, damage: finalDmg, color: tower.card.color, isIce: tower.card.type === 'aoe' }); } 
-        else if (tower.card.type === 'laser') { 
+  if (tower.card.type === 'projectile' || tower.card.type === 'aoe') { gameState.bullets.push({ x: tower.x, y: tower.y, target: target, speed: tower.card.bulletSpeed || 5, damage: finalDmg, color: tower.card.color, isIce: tower.card.type === 'aoe' }); }
+  else if (tower.card.type === 'chain') {
+  target.hp -= finalDmg;
+  const nearby = gameState.enemies.filter(enemy => enemy !== target && Math.hypot(enemy.x - target.x, enemy.y - target.y) <= 75).slice(0, tower.card.chainCount || 3);
+  nearby.forEach(enemy => { enemy.hp -= finalDmg * 0.55; gameState.lasers.push({ startX: target.x, startY: target.y, endX: enemy.x, endY: enemy.y, color: tower.card.color }); });
+  gameState.lasers.push({ startX: tower.x, startY: tower.y, endX: target.x, endY: target.y, color: tower.card.color });
+  }
+  else if (tower.card.type === 'laser') {
             if (gameState.buffs['dmg']) finalDmg *= (1 + gameState.buffs['dmg'] * 0.25);
             target.hp -= finalDmg; 
             gameState.lasers.push({ startX: tower.x, startY: tower.y, endX: target.x, endY: target.y, color: tower.card.color }); 
@@ -1250,7 +1279,7 @@
         document.getElementById('base-health-text').innerText = `${Math.max(0, gameState.hp)} / ${gameState.maxHp}`;
         document.getElementById('energy-bar-fill').style.width = (gameState.energy / gameState.maxEnergy) * 100 + '%';
         document.getElementById('energy-bar-text').innerText = `${Math.floor(gameState.energy)} / ${gameState.maxEnergy}`;
-        document.querySelectorAll('.card').forEach(c => { if (gameState.energy >= TOWER_DATA[c.getAttribute('data-type')].cost) c.classList.remove('disabled'); else c.classList.add('disabled'); });
+        document.querySelectorAll('.card').forEach(c => { const tower = TOWER_DATA[c.getAttribute('data-type')]; if (!tower || c.classList.contains('secret-card') && !metaData.gacha.unlockedTowers.includes(c.dataset.type)) return; if (gameState.energy >= tower.cost) c.classList.remove('disabled'); else c.classList.add('disabled'); });
         
         if (document.getElementById('battle-tech-points')) {
             document.getElementById('battle-tech-points').innerText = metaData.techPoints;
@@ -1386,7 +1415,7 @@
         if (!cardEl) return;
         cardEl.classList.remove('refreshing'); void cardEl.offsetWidth; cardEl.classList.add('refreshing');
 
-        const types = ['machineGun', 'laser', 'ice', 'sniper'];
+        const types = ['machineGun', 'laser', 'ice', 'sniper', ...metaData.gacha.unlockedTowers];
         const randomType = types[Math.floor(Math.random() * types.length)];
         const tower = TOWER_DATA[randomType];
 
@@ -1397,6 +1426,8 @@
         if (randomType === 'laser') name = 'Lazer';
         if (randomType === 'ice') name = 'Freeze';
         if (randomType === 'sniper') name = 'Sniper';
+        if (randomType === 'plasma') name = 'Plasma';
+        if (randomType === 'blackhole') name = 'Black Hole';
         cardEl.querySelector('.card-name').innerText = name;
 
         const ctx = cardEl.querySelector('.card-icon-canvas').getContext('2d');
@@ -1407,6 +1438,12 @@
     }
 
     window.addEventListener('mousemove', handleMove); window.addEventListener('mouseup', handleUp); window.addEventListener('touchmove', handleMove, {passive: false}); window.addEventListener('touchend', handleUp);
+
+  const bottomNav = document.getElementById('bottom-nav');
+  let navDragStartX = 0; let navScrollStart = 0;
+  bottomNav.addEventListener('mousedown', event => { navDragStartX = event.pageX; navScrollStart = bottomNav.scrollLeft; bottomNav.classList.add('dragging'); });
+  window.addEventListener('mousemove', event => { if (!bottomNav.classList.contains('dragging')) return; bottomNav.scrollLeft = navScrollStart - (event.pageX - navDragStartX); });
+  window.addEventListener('mouseup', () => bottomNav.classList.remove('dragging'));
 
     // =========================================
     // 星際突圍 / 隕石突圍任務邏輯 (全新升級版)
@@ -1788,7 +1825,7 @@
   }
   }
 
-  // 移出螢幕刪除
+  // 移出螢幕���除
             if (mMeteors[i] && m.y > mCanvas.height + 50) {
                 mMeteors.splice(i, 1);
             }
