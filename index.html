@@ -109,30 +109,30 @@
             gap: 10px;
             justify-content: space-between;
         }
-        .upgrade-card {
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background: rgba(0, 243, 255, 0.05);
-            border: 1px solid rgba(0, 243, 255, 0.5);
-            border-radius: 8px;
-            padding: 10px 8px;
-            text-align: center;
-            overflow: hidden;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .upgrade-card:hover {
-            background: rgba(0, 243, 255, 0.2);
-            border-color: #00f3ff;
-            box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
-        }
-        .upgrade-card h3 { font-size: 13px; line-height: 1.3; margin: 5px 0; }
-        .upgrade-card p { font-size: 11px; margin: 3px 0; color: #aaa; }
-        .upgrade-card h3, .upgrade-card p { white-space: normal; }
-        .card-icon { font-size: 24px; margin-bottom: 3px; }
-        .cost { margin-top: 7px; color: #ff5555; font-weight: bold; font-size: 10px; line-height: 1.3; overflow-wrap: anywhere; }
+  .upgrade-grid .upgrade-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(0, 243, 255, 0.05);
+  border: 1px solid rgba(0, 243, 255, 0.5);
+  border-radius: 8px;
+  padding: 10px 8px;
+  text-align: center;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s;
+  }
+  .upgrade-grid .upgrade-card:hover {
+  background: rgba(0, 243, 255, 0.2);
+  border-color: #00f3ff;
+  box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+  }
+  .upgrade-grid .upgrade-card h3 { font-size: 13px; line-height: 1.3; margin: 5px 0; }
+  .upgrade-grid .upgrade-card p { font-size: 11px; margin: 3px 0; color: #aaa; }
+  .upgrade-grid .upgrade-card h3, .upgrade-grid .upgrade-card p { white-space: normal; }
+  .upgrade-grid .card-icon { font-size: 24px; margin-bottom: 3px; }
+  .upgrade-grid .cost { margin-top: 7px; color: #ff5555; font-weight: bold; font-size: 10px; line-height: 1.3; overflow-wrap: anywhere; }
                 
         #game-canvas { width: 100%; flex: 1; display: block; }
         #sell-btn-overlay { position: absolute; background: rgba(255, 0, 60, 0.85); border: 1px solid #ff003c; color: #fff; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; z-index: 50; display: none; text-shadow: 0 0 5px #000; box-shadow: 0 0 10px rgba(255, 0, 60, 0.5); transform: translate(-50%, 0); transition: 0.1s; }
