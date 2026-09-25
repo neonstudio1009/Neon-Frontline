@@ -70,13 +70,13 @@
             background: rgba(10, 13, 20, 0.9);
             border: 1px solid #00f3ff;
             border-radius: 12px;
-            padding: 18px 16px;
+            padding: 12px 14px;
             text-align: center;
             box-shadow: 0 0 16px rgba(0, 243, 255, 0.16) inset;
             margin-bottom: 14px;
         }
         .yield-display {
-            font-size: 36px;
+            font-size: 28px;
             font-weight: bold;
             color: #ffcc00;
             text-shadow: 0 0 15px rgba(255, 204, 0, 0.6);
@@ -88,9 +88,9 @@
             font-weight: bold;
             border: none;
             border-radius: 8px;
-            padding: 12px 14px;
-            width: 100%;
-            margin-top: 14px;
+            padding: 9px 12px;
+            width: 92%;
+            margin: 10px auto 0;
             cursor: pointer;
             box-shadow: 0 0 15px rgba(0, 243, 255, 0.6);
             transition: all 0.2s;
@@ -111,6 +111,9 @@
         }
         .upgrade-card {
             min-width: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             background: rgba(0, 243, 255, 0.05);
             border: 1px solid rgba(0, 243, 255, 0.5);
             border-radius: 8px;
@@ -127,6 +130,7 @@
         }
         .upgrade-card h3 { font-size: 13px; line-height: 1.3; margin: 5px 0; }
         .upgrade-card p { font-size: 11px; margin: 3px 0; color: #aaa; }
+        .upgrade-card h3, .upgrade-card p { white-space: normal; }
         .card-icon { font-size: 24px; margin-bottom: 3px; }
         .cost { margin-top: 7px; color: #ff5555; font-weight: bold; font-size: 10px; line-height: 1.3; overflow-wrap: anywhere; }
                 
@@ -349,7 +353,6 @@
                 <div class="cost">Upgrade cost: <span id="cap-cost">150</span></div>
             </div>
         </div>
-        <button class="btn" style="margin-top: auto;" onclick="switchTab('levels', document.getElementById('nav-btn-levels'))">Return to Base</button>
     </div>
     
     <div id="screen-battle" class="screen">
@@ -1391,9 +1394,16 @@
         document.getElementById('mission-game-over').style.display = 'none';
         document.getElementById('mission-hint').style.display = 'block';
         
-        mPlayer = { 
-            x: mCanvas.width/2, y: mCanvas.height - 80, size: 18, color: '#00f3ff', 
-            fireRate: 12, fireTimer: 0,
+        const fighterType = metaData.fighters?.equipped || 'scout';
+        const fighterStats = {
+            scout: { size: 18, color: '#00f3ff', fireRate: 12, hp: 1 },
+            heavy: { size: 23, color: '#ff9d00', fireRate: 16, hp: 2 },
+            stealth: { size: 16, color: '#b76cff', fireRate: 8, hp: 1 }
+        }[fighterType];
+        mPlayer = {
+            x: mCanvas.width/2, y: mCanvas.height - 80, type: fighterType,
+            size: fighterStats.size, color: fighterStats.color, fireRate: fighterStats.fireRate,
+            hp: fighterStats.hp, maxHp: fighterStats.hp, fireTimer: 0,
             buffs: { fastFire: 0, multiShot: 0, invincible: 0 }
         };
         mMeteors = []; mEnemies = []; mBullets = []; mEnemyBullets = []; mParticles = []; mItems = []; mFloatingTexts = [];
@@ -1571,12 +1581,13 @@
         });
 
         // 3. 戰機發射邏輯
+        if (mPlayer.type === 'stealth' && mFrame % 900 === 0) mPlayer.buffs.invincible = 180;
         let currentFireRate = mPlayer.buffs.fastFire > 0 ? 5 : mPlayer.fireRate;
         mPlayer.fireTimer++;
         if (mPlayer.fireTimer >= currentFireRate) {
             mPlayer.fireTimer = 0;
-            if (mPlayer.buffs.multiShot > 0) {
-                // 3向散射子彈
+            if (mPlayer.buffs.multiShot > 0 || mPlayer.type === 'heavy') {
+                // 重裝突擊艦與散射增益使用三向火力
                 mBullets.push({ x: mPlayer.x, y: mPlayer.y - 15, vx: 0, vy: -12, color: '#00ff66' });
                 mBullets.push({ x: mPlayer.x - 8, y: mPlayer.y - 10, vx: -3, vy: -11, color: '#00ff66' });
                 mBullets.push({ x: mPlayer.x + 8, y: mPlayer.y - 10, vx: 3, vy: -11, color: '#00ff66' });
@@ -1768,9 +1779,15 @@
                 if (mPlayer.buffs.invincible > 0) {
                     mEnemyBullets.splice(i, 1);
                 } else {
-                    createMExplosion(mPlayer.x, mPlayer.y, '#ff003c', 35);
-                    missionGameOver();
-                    return;
+                        if (mPlayer.type === 'heavy' && mPlayer.hp > 1) {
+                            mPlayer.hp--;
+                            mMeteors.splice(i, 1);
+                            addMFloatingText(mPlayer.x, mPlayer.y - 25, `ARMOR ${mPlayer.hp}/${mPlayer.maxHp}`, '#ff9d00');
+                        } else {
+                            createMExplosion(mPlayer.x, mPlayer.y, '#ff003c', 35);
+                            missionGameOver();
+                            return;
+                        }
                 }
             } else if (eb.y > mCanvas.height + 10) {
                 mEnemyBullets.splice(i, 1);
@@ -1868,15 +1885,31 @@
             mCtx.stroke();
         }
 
-        // 戰機機身
+        // 戰機機身依照車間選擇繪製不同輪廓
         mCtx.shadowColor = mPlayer.color;
         mCtx.shadowBlur = 12;
         mCtx.fillStyle = mPlayer.color;
         mCtx.beginPath();
-        mCtx.moveTo(0, -mPlayer.size * 1.2);
-        mCtx.lineTo(-mPlayer.size, mPlayer.size);
-        mCtx.lineTo(0, mPlayer.size * 0.6);
-        mCtx.lineTo(mPlayer.size, mPlayer.size);
+        if (mPlayer.type === 'heavy') {
+            mCtx.moveTo(0, -mPlayer.size);
+            mCtx.lineTo(-mPlayer.size * 1.15, -mPlayer.size * .2);
+            mCtx.lineTo(-mPlayer.size, mPlayer.size);
+            mCtx.lineTo(0, mPlayer.size * .55);
+            mCtx.lineTo(mPlayer.size, mPlayer.size);
+            mCtx.lineTo(mPlayer.size * 1.15, -mPlayer.size * .2);
+        } else if (mPlayer.type === 'stealth') {
+            mCtx.moveTo(0, -mPlayer.size * 1.35);
+            mCtx.lineTo(-mPlayer.size * .55, mPlayer.size * .15);
+            mCtx.lineTo(-mPlayer.size * 1.25, mPlayer.size * .75);
+            mCtx.lineTo(0, mPlayer.size * .45);
+            mCtx.lineTo(mPlayer.size * 1.25, mPlayer.size * .75);
+            mCtx.lineTo(mPlayer.size * .55, mPlayer.size * .15);
+        } else {
+            mCtx.moveTo(0, -mPlayer.size * 1.2);
+            mCtx.lineTo(-mPlayer.size, mPlayer.size);
+            mCtx.lineTo(0, mPlayer.size * .6);
+            mCtx.lineTo(mPlayer.size, mPlayer.size);
+        }
         mCtx.closePath();
         mCtx.fill();
 
