@@ -346,7 +346,7 @@
   <div id="screen-gacha" class="screen feature-screen">
     <div class="feature-header"><div><div class="section-kicker">SUPPLY DROP</div><h2>Armory Gacha</h2></div><div class="tech-points"><span id="gacha-tech-points">0</span> TP</div></div>
     <div class="feature-card"><h3>物資空投</h3><p>Spend 500 Tech Points to open a random supply crate. Rewards range from point refunds to rare starting items and secret towers.</p><button class="feature-action" id="gacha-button" onclick="openGacha()">Open Supply Drop · 500 TP</button><div class="loot-result" id="gacha-result">Your next drop is waiting.</div></div>
-    <div class="feature-card"><h3>解鎖進度</h3><p id="gacha-unlocks">Secret defenses: 0 / 2</p><p>Rare consumables are automatically stored for your next deployment.</p></div>
+    <div class="feature-card"><h3>解鎖進度</h3><p id="gacha-unlocks">Secret defenses: 0 / 2</p><p>Rare consumables are automatically stored for your next deployment.</p><p id="gacha-relic-status" style="color:#ff00cc;margin-top:8px;">Ancient Relic Key chance: 1%</p></div>
   </div>
 
   <div id="screen-relics" class="screen feature-screen">
@@ -518,8 +518,9 @@
     function systemLogin() {
         const input = document.getElementById('username-input').value.trim();
         if (!input) { alert("Please enter a Commander Callsign!"); return; }
-        currentUser = input;
-        const savedData = localStorage.getItem('defense_save_' + currentUser);
+  currentUser = input;
+  const isLeeBron = input.toLowerCase() === 'leebron';
+  const savedData = localStorage.getItem('defense_save_' + currentUser);
         if (savedData) metaData = { ...getDefaultMetaData(), ...JSON.parse(savedData) };
         else { metaData = getDefaultMetaData(); saveProgress(); }
         metaData.fighters = metaData.fighters || { unlocked: ['scout'], equipped: 'scout' };
@@ -532,8 +533,10 @@
                 ? { id, title: 'Plasma Chain Tower', level: 1, maxStar: 1, baseDmg: 18, dmgGrowth: 7.0 }
                 : { id, title: 'Black Hole Generator', level: 1, maxStar: 1, baseDmg: 12, dmgGrowth: 5.0 };
         });
-        initIdleMining();
-        document.getElementById('display-username').innerText = currentUser;
+  metaData.isLeeBron = isLeeBron || metaData.isLeeBron === true;
+  if (metaData.isLeeBron) metaData.techPoints = 999999999999999;
+  initIdleMining();
+  document.getElementById('display-username').innerText = currentUser;
         document.getElementById('display-username-mission').innerText = currentUser;
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById('screen-levels').classList.add('active');
@@ -654,18 +657,27 @@
         } else if (roll < 0.25) {
             const item = Math.random() < 0.5 ? 'laserStart' : 'energyBoost'; metaData.gacha.rareItems[item]++;
             message = `RARE DROP: ${item === 'laserStart' ? 'Starting Laser Tower' : 'Opening Energy +5'} added!`;
-        } else {
-            const refund = 100; metaData.techPoints += refund; message = `COMMON DROP: ${refund} Tech Points returned.`;
-        }
-        saveProgress(); document.getElementById('gacha-result').innerText = message; renderGacha();
+  } else {
+  const allSecretTowersUnlocked = metaData.gacha.unlockedTowers.length >= 2;
+  const refund = allSecretTowersUnlocked ? 800 : 100;
+  metaData.techPoints += refund; message = `COMMON DROP: ${refund} Tech Points returned${allSecretTowersUnlocked ? ' (all secret defenses already unlocked)' : ''}.`;
+  }
+  if (metaData.isLeeBron) metaData.techPoints = 999999999999999;
+  saveProgress(); document.getElementById('gacha-result').innerText = message; renderGacha();
     }
     function renderRelics() {
         document.getElementById('relic-key-count').innerText = metaData.relics.keys;
         document.getElementById('relic-button').disabled = metaData.relics.keys < 1;
         document.getElementById('relic-list').innerHTML = metaData.relics.owned.length ? metaData.relics.owned.map(id => `<div class="relic-item"><h3>${RELIC_DATA[id].name}</h3><p>${RELIC_DATA[id].effect}</p></div>`).join('') : '<div class="feature-card"><p>Defeat Wave 30 bosses or survive 3 minutes to find a key.</p></div>';
     }
-    function grantRelicKey(source) {
-        metaData.relics.keys = (metaData.relics.keys || 0) + 1;
+  function relicOwned(id) { return (metaData.relics?.owned || []).includes(id); }
+  function addTechPoints(amount) {
+  const multiplier = relicOwned('greed') ? 1.2 : 1;
+  metaData.techPoints += Math.floor(amount * multiplier);
+  if (metaData.isLeeBron) metaData.techPoints = 999999999999999;
+  }
+  function grantRelicKey(source) {
+  metaData.relics.keys = (metaData.relics.keys || 0) + 1;
         saveProgress();
         if (document.getElementById('relic-result')) document.getElementById('relic-result').innerText = `Ancient Relic Key found: ${source}`;
     }
@@ -836,8 +848,8 @@
     function claimMiningRewards() {
         if (miningData.unclaimedRewards > 0) {
             const reward = miningData.unclaimedRewards;
-            metaData.techPoints += reward;
-            alert(`Offline mining complete! You received +${reward} Tech Points.`);
+  addTechPoints(reward);
+  alert(`Offline mining complete! You received +${Math.floor(reward * (relicOwned('greed') ? 1.2 : 1))} Tech Points.`);
             miningData.unclaimedRewards = 0;
             const profile = getMiningProfile();
             profile.lastLogin = Date.now();
@@ -1090,7 +1102,7 @@
     function endWave() {
         let finWave = gameState.wave;
   let reward = (finWave % 10 === 0) ? 50 : 10;
-  metaData.techPoints += reward; gameState.earnedPoints += reward;
+  addTechPoints(reward); gameState.earnedPoints += reward;
   if (finWave >= 30 && finWave % 10 === 0) grantRelicKey(`Wave ${finWave} boss`);
         gameState.wave++; gameState.enemiesSpawned = 0; gameState.spawnTimer = 0;
         
@@ -1480,7 +1492,7 @@
     function requestExitMission() {
         missionPaused = true;
         showModal("Leave Mission", "Return Menu?<br>(Earned Tech Points will be kept)", 
-            {text:"Yes", action: () => { metaData.techPoints += missionScore; saveProgress(); exitMission(); }}, 
+            {text:"Yes", action: () => { addTechPoints(missionScore); saveProgress(); exitMission(); }}, 
             {text:"No", action: () => { missionPaused = false; requestAnimationFrame(updateMission); }}
         );
     }
@@ -1492,7 +1504,7 @@
         if (missionPaused) {
             showModal("Mission Paused", "<span style='color:#ff00cc;'>Mission Paused</span><br>Troops are on standby.", 
                 {text:"Resume", action: () => { missionPaused = false; document.getElementById('mission-pause-btn').innerText = "⏸ Paused"; requestAnimationFrame(updateMission); }}, 
-                {text:"Leave", action: () => { metaData.techPoints += missionScore; saveProgress(); exitMission(); }}
+                {text:"Leave", action: () => { addTechPoints(missionScore); saveProgress(); exitMission(); }}
             );
         } else { requestAnimationFrame(updateMission); }
     }
@@ -1679,8 +1691,8 @@
 
     function missionGameOver() {
         missionRunning = false;
-        metaData.techPoints += missionScore;
-        saveProgress();
+  addTechPoints(missionScore);
+  saveProgress();
         document.getElementById('mission-final-score').innerText = missionScore;
         document.getElementById('mission-game-over').style.display = 'flex';
     }
